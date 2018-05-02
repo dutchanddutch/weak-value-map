@@ -42,34 +42,26 @@ struct Entry {
 };
 
 
-class WeakValueMap : public ObjectWrap, public EntryOwner {
+using MapBase = std::unordered_map<Key, Entry>;
+
+class WeakValueMap : public ObjectWrap, public EntryOwner, private MapBase {
 private:
-	std::unordered_map<Key, Entry> map;
-
 	void garbage_collect( Entry &entry ) final override {
-		remove( entry.key );
-	}
-
-	size_t size() {
-		return map.size();
+		erase( entry.key );
 	}
 
 	template< typename Callback >
 	void find( Key const &key, Callback callback ) {
-		auto i = map.find( key );
-		if( i != map.end() )
+		auto i = MapBase::find( key );
+		if( i != end() )
 			callback( i->second );
 	}
 
 	Entry &find_or_insert( Key const &key ) {
-		auto i = map.emplace( std::piecewise_construct,
+		auto i = emplace( std::piecewise_construct,
 				std::forward_as_tuple( key ),
 				std::forward_as_tuple( *this, key ) ).first;
 		return i->second;
-	}
-
-	bool remove( Key const &key ) {
-		return map.erase( key );
 	}
 
 public:
@@ -141,7 +133,7 @@ public:
 	}
 
 	void delete_method( Args &args, Key const &key ) {
-		remove( key );
+		erase( key );
 
 		args.GetReturnValue().Set( args.This() );
 	}
