@@ -5,47 +5,41 @@
 #include <tuple>
 #include <string>
 
-using Args = v8::FunctionCallbackInfo<v8::Value> const;
-using PropArgs = v8::PropertyCallbackInfo<v8::Value> const;
+using Args	= v8::FunctionCallbackInfo<v8::Value> const;
+using PropArgs	= v8::PropertyCallbackInfo<v8::Value> const;
+
+template< class T = v8::Value > using Global = v8::Global<T>;
+template< class T = v8::Value > using Local  = v8::Local<T>;
+
+
+struct Entry;
+
+using Key = std::string;
+using Map = std::unordered_map< Key, Entry >;
+
+struct Entry {
+	Map &map;
+	Key const key;
+	Global<> value;
+
+	static void gc_callback( v8::WeakCallbackInfo<Entry> const &info ) {
+		auto entry = info.GetParameter();
+		entry->map.erase( entry->key );
+	}
+
+	void set( v8::Isolate *isolate, Local<> handle ) {
+		value.Reset( isolate, handle );
+		value.SetWeak( this, gc_callback, v8::WeakCallbackType::kParameter );
+		value.MarkIndependent();
+	}
+
+	Entry( Map &map, Key const &key ) : map{map}, key{key} {};
+};
 
 
 class WeakValueMap : public ObjectWrap {
-public:
-	//-------- public types ---------------------------------------------------------------
-
-	using Key = std::string;
-
 private:
-	//-------- map implementation: types --------------------------------------------------
-
-	struct Element;
-
-	using Map = std::unordered_map< Key, Element >;
-
-	struct Element {
-		Map &map;
-		Key const key;
-		v8::Global<v8::Value> value;
-
-		static void gc_callback( v8::WeakCallbackInfo<Element> const &info ) {
-			auto element = info.GetParameter();
-			element->map.erase( element->key );
-		}
-
-		void set( v8::Isolate *isolate, v8::Local<v8::Value> handle ) {
-			value.Reset( isolate, handle );
-			value.SetWeak( this, gc_callback, v8::WeakCallbackType::kParameter );
-			value.MarkIndependent();
-		}
-
-		Element( Map &map, Key const &key ) : map{map}, key{key} {};
-	};
-
-	//-------- map implementation: fields -------------------------------------------------
-
 	Map map;
-
-	//-------- map implementation: methods ------------------------------------------------
 
 	size_t size() {
 		return map.size();
@@ -58,7 +52,7 @@ private:
 			callback( i->second );
 	}
 
-	Element &find_or_insert( Key const &key ) {
+	Entry &find_or_insert( Key const &key ) {
 		auto i = map.emplace( std::piecewise_construct,
 				std::forward_as_tuple( key ),
 				std::forward_as_tuple( map, key ) ).first;
@@ -91,7 +85,7 @@ public:
 	//-------- callback wrappers ----------------------------------------------------------
 
 	template< void (WeakValueMap::*getter)( PropArgs & ) >
-	static void wrap( v8::Local<v8::String> prop, PropArgs &args ) {
+	static void wrap( Local<v8::String> prop, PropArgs &args ) {
 		auto obj = ObjectWrap::Unwrap<WeakValueMap>( args.Holder() );
 		(obj->*getter)( args );
 	}
@@ -101,7 +95,7 @@ public:
 		auto isolate = args.GetIsolate();
 		auto context = isolate->GetCurrentContext();
 
-		auto key = v8::Local<v8::String>{};
+		auto key = Local<v8::String>{};
 		if( ! args[0]->ToString( context ).ToLocal( &key ) )
 			return;
 
@@ -121,8 +115,8 @@ public:
 	//-------- methods --------------------------------------------------------------------
 
 	void get_method( Args &args, Key const &key ) {
-		find( key, [&]( Element &element ) {
-			args.GetReturnValue().Set( element.value );
+		find( key, [&]( Entry &entry ) {
+			args.GetReturnValue().Set( entry.value );
 		});
 	}
 
@@ -131,8 +125,8 @@ public:
 		if( args[1]->IsUndefined() )
 			return delete_method( args, key );
 
-		auto &element = find_or_insert( key );
-		element.set( args.GetIsolate(), args[1] );
+		auto &entry = find_or_insert( key );
+		entry.set( args.GetIsolate(), args[1] );
 
 		args.GetReturnValue().Set( args.This() );
 	}
@@ -147,8 +141,8 @@ public:
 
 //-------- module initialization --------------------------------------------------------------
 
-void initialize( v8::Local<v8::Object> exports, v8::Local<v8::Value> module,
-		v8::Local<v8::Context> context )
+void initialize( Local<v8::Object> exports, Local<v8::Object> module,
+		Local<v8::Context> context )
 {
 	ObjectBuilder exp { context, exports };
 
