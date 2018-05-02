@@ -20,48 +20,59 @@ private:
 	virtual void garbage_collect( Entry &entry ) = 0;
 };
 
-using Key = std::string;
-
-struct Entry {
+struct EntryData {
 	EntryOwner &owner;
-	Key const key;
-	Global<> value;
+	Global<>    value;
+
+	EntryData( EntryOwner &owner ) : owner{owner} {};
+};
+
+
+using Key	= std::string;
+using EntryBase = std::pair<Key const, EntryData>;
+
+struct Entry : EntryBase {
+	Key      const &key()   const {  return first;  }
+	EntryOwner     &owner() const {  return second.owner;  }
+	Global<> const &value() const {  return second.value;  }
+
+	// Entry merely adds some (non-virtual) methods to EntryBase, so this cast is safe.
+	static Entry &cast( EntryBase &entry ) {
+		return (Entry &)entry;
+	}
 
 	static void gc_callback( v8::WeakCallbackInfo<Entry> const &info ) {
 		auto &entry = *info.GetParameter();
-		entry.owner.garbage_collect( entry );
+		entry.owner().garbage_collect( entry );
 	}
 
 	void set( v8::Isolate *isolate, Local<> handle ) {
+		auto &value = second.value;
 		value.Reset( isolate, handle );
 		value.SetWeak( this, gc_callback, v8::WeakCallbackType::kParameter );
 		value.MarkIndependent();
 	}
-
-	Entry( EntryOwner &owner, Key const &key ) : owner{owner}, key{key} {};
 };
 
 
-using MapBase = std::unordered_map<Key, Entry>;
+using MapBase = std::unordered_map<Key, EntryData>;
 
 class WeakValueMap : public ObjectWrap, public EntryOwner, private MapBase {
 private:
 	void garbage_collect( Entry &entry ) final override {
-		erase( entry.key );
+		erase( entry.key() );
 	}
 
 	template< typename Callback >
 	void find( Key const &key, Callback callback ) {
 		auto i = MapBase::find( key );
 		if( i != end() )
-			callback( i->second );
+			callback( Entry::cast( *i ) );
 	}
 
 	Entry &find_or_insert( Key const &key ) {
-		auto i = emplace( std::piecewise_construct,
-				std::forward_as_tuple( key ),
-				std::forward_as_tuple( *this, key ) ).first;
-		return i->second;
+		auto i = emplace( key, *this ).first;
+		return Entry::cast( *i );
 	}
 
 public:
@@ -117,7 +128,7 @@ public:
 
 	void get_method( Args &args, Key const &key ) {
 		find( key, [&]( Entry &entry ) {
-			args.GetReturnValue().Set( entry.value );
+			args.GetReturnValue().Set( entry.value() );
 		});
 	}
 
