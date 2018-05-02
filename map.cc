@@ -14,17 +14,22 @@ template< class T = v8::Value > using Local  = v8::Local<T>;
 
 struct Entry;
 
+class EntryOwner {
+private:
+	friend class Entry;
+	virtual void garbage_collect( Entry &entry ) = 0;
+};
+
 using Key = std::string;
-using Map = std::unordered_map< Key, Entry >;
 
 struct Entry {
-	Map &map;
+	EntryOwner &owner;
 	Key const key;
 	Global<> value;
 
 	static void gc_callback( v8::WeakCallbackInfo<Entry> const &info ) {
-		auto entry = info.GetParameter();
-		entry->map.erase( entry->key );
+		auto &entry = *info.GetParameter();
+		entry.owner.garbage_collect( entry );
 	}
 
 	void set( v8::Isolate *isolate, Local<> handle ) {
@@ -33,13 +38,17 @@ struct Entry {
 		value.MarkIndependent();
 	}
 
-	Entry( Map &map, Key const &key ) : map{map}, key{key} {};
+	Entry( EntryOwner &owner, Key const &key ) : owner{owner}, key{key} {};
 };
 
 
-class WeakValueMap : public ObjectWrap {
+class WeakValueMap : public ObjectWrap, public EntryOwner {
 private:
-	Map map;
+	std::unordered_map<Key, Entry> map;
+
+	void garbage_collect( Entry &entry ) final override {
+		remove( entry.key );
+	}
 
 	size_t size() {
 		return map.size();
@@ -55,7 +64,7 @@ private:
 	Entry &find_or_insert( Key const &key ) {
 		auto i = map.emplace( std::piecewise_construct,
 				std::forward_as_tuple( key ),
-				std::forward_as_tuple( map, key ) ).first;
+				std::forward_as_tuple( *this, key ) ).first;
 		return i->second;
 	}
 
