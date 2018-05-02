@@ -126,6 +126,13 @@ public:
 
 	//-------- methods --------------------------------------------------------------------
 
+	void has_method( Args &args, Key const &key ) {
+		args.GetReturnValue().Set( false );
+		find( key, [&]( Entry &entry ) {
+			args.GetReturnValue().Set( true );
+		});
+	}
+
 	void get_method( Args &args, Key const &key ) {
 		find( key, [&]( Entry &entry ) {
 			args.GetReturnValue().Set( entry.value() );
@@ -161,6 +168,7 @@ void initialize( Local<v8::Object> exports, Local<v8::Object> module,
 	exp.add_class( "WeakValueMap", WeakValueMap::constructor, []( ClassBuilder cls ) {
 		cls.set_internal_field_count( 1 );
 		cls.add_property( "size", WeakValueMap::wrap<&WeakValueMap::size_getter> );
+		cls.add_method( "has",    WeakValueMap::wrap<&WeakValueMap::has_method> );
 		cls.add_method( "get",    WeakValueMap::wrap<&WeakValueMap::get_method> );
 		cls.add_method( "set",    WeakValueMap::wrap<&WeakValueMap::set_method> );
 		cls.add_method( "delete", WeakValueMap::wrap<&WeakValueMap::delete_method> );

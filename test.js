@@ -12,7 +12,9 @@ test('map', function(assert) {
 	let d1 = new Date();
 	let d2 = new Date(d1);
 	map.set(5, d1);
+	assert.strictEqual(map.has(6), false);
 	map.set(6, {6: 'six'});
+	assert.strictEqual(map.has(6), true);
 	assert.strictEqual(map.get(1), 'one');
 	assert.strictEqual(map.get(2), 2);
 	assert.strictEqual(map.get(3), true);
@@ -24,6 +26,7 @@ test('map', function(assert) {
 	assert.strictEqual(map.get(1), 'changed');
 	assert.strictEqual(map.size, 6);
 	map.delete(1);
+	assert.strictEqual(map.has(1), false);
 	assert.strictEqual(map.get(1), undefined);
 	assert.strictEqual(map.size, 5);
 	assert.end();
