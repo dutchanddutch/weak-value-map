@@ -34,7 +34,7 @@ struct ClassBuilder {
 		prototype->Set( fun_name, fun, attributes );
 	}
 
-	void add_property( char const *name, v8::AccessorGetterCallback getter,
+	void add_accessor( char const *name, v8::AccessorGetterCallback getter,
 			v8::AccessorSetterCallback setter = NULL,
 			v8::PropertyAttribute attributes = v8::DontEnum )
 	{
@@ -43,8 +43,19 @@ struct ClassBuilder {
 		auto instance = cls->InstanceTemplate();
 		if( ! setter )
 			attributes |= v8::ReadOnly;
-		instance->SetAccessor( prop_name, getter, setter, {},
-				v8::DEFAULT, attributes, signature );
+		instance->SetAccessor( prop_name, getter, setter, {}, v8::DEFAULT, attributes, signature );
+	}
+
+	void add_accessor( char const *name, v8::AccessorNameGetterCallback getter,
+			v8::AccessorNameSetterCallback setter = NULL,
+			v8::PropertyAttribute attributes = v8::DontEnum )
+	{
+		auto signature = v8::AccessorSignature::New( isolate, cls );
+		auto prop_name = intern_string( isolate, name );
+		auto instance = cls->InstanceTemplate();
+		if( ! setter )
+			attributes |= v8::ReadOnly;
+		instance->SetAccessor( prop_name, getter, setter, {}, v8::DEFAULT, attributes, signature );
 	}
 };
 
@@ -64,5 +75,35 @@ struct ObjectBuilder {
 
 		auto fun = cls->GetFunction( context ).ToLocalChecked();
 		target->Set( context, cls_name, fun ).ToChecked();
+	}
+
+	void add_method( char const *name, v8::FunctionCallback callback,
+			v8::PropertyAttribute attributes = v8::DontEnum )
+	{
+		auto isolate = context->GetIsolate();
+		auto tmpl = v8::FunctionTemplate::New( isolate, callback, {} );
+		auto fun_name = intern_string( isolate, name );
+
+		auto fun = tmpl->GetFunction( context ).ToLocalChecked();
+		target->Set( context, fun_name, fun ).ToChecked();
+	}
+
+	void add_property( char const *name, v8::Local<v8::Value> value,
+			v8::PropertyAttribute attributes = v8::None )
+	{
+		auto isolate = context->GetIsolate();
+		auto prop_name = intern_string( isolate, name );
+		target->DefineOwnProperty( context, prop_name, value, attributes ).ToChecked();
+	}
+
+	void add_accessor( char const *name, v8::AccessorNameGetterCallback getter,
+			v8::AccessorNameSetterCallback setter = NULL,
+			v8::PropertyAttribute attributes = v8::DontEnum )
+	{
+		auto isolate = context->GetIsolate();
+		auto prop_name = intern_string( isolate, name );
+		if( ! setter )
+			attributes |= v8::ReadOnly;
+		target->SetAccessor( context, prop_name, getter, setter, {}, v8::DEFAULT, attributes ).ToChecked();
 	}
 };
