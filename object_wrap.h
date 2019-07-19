@@ -85,7 +85,9 @@ class ObjectWrap {
 
   inline void MakeWeak() {
     persistent().SetWeak(this, WeakCallback, v8::WeakCallbackType::kParameter);
+#if ( V8_MAJOR_VERSION < 7 )
     persistent().MarkIndependent();
+#endif
   }
 
   /* Ref() marks the object as being attached to an event loop.
@@ -94,7 +96,9 @@ class ObjectWrap {
    */
   virtual void Ref() {
     assert(!persistent().IsEmpty());
+#if ( V8_MAJOR_VERSION < 7 )
     assert(!persistent().IsNearDeath());
+#endif
     persistent().ClearWeak();
     refs_++;
   }
@@ -110,7 +114,9 @@ class ObjectWrap {
    */
   virtual void Unref() {
     assert(!persistent().IsEmpty());
+#if ( V8_MAJOR_VERSION < 7 )
     assert(!persistent().IsNearDeath());
+#endif
     assert(!persistent().IsWeak());
     assert(refs_ > 0);
     if (--refs_ == 0)
@@ -124,7 +130,9 @@ class ObjectWrap {
       const v8::WeakCallbackInfo<ObjectWrap>& data) {
     ObjectWrap* wrap = data.GetParameter();
     assert(wrap->refs_ == 0);
+#if ( V8_MAJOR_VERSION < 7 )
     assert(wrap->handle_.IsNearDeath());
+#endif
     wrap->handle_.Reset();
     data.SetSecondPassCallback(WeakCallback2);
   }

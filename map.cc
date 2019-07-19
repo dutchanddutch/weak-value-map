@@ -50,7 +50,9 @@ struct Entry : EntryBase {
 		auto &value = second.value;
 		value.Reset( isolate, handle );
 		value.SetWeak( this, gc_callback, v8::WeakCallbackType::kParameter );
+#if ( V8_MAJOR_VERSION < 7 )
 		value.MarkIndependent();
+#endif
 	}
 };
 
