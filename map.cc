@@ -162,8 +162,8 @@ public:
 
 //-------- module initialization --------------------------------------------------------------
 
-void initialize( Local<v8::Object> exports, Local<v8::Object> module,
-		Local<v8::Context> context )
+void initialize( Local<v8::Object> exports, Local<v8::Value> module,
+		Local<v8::Context> context, void *priv )
 {
 	ObjectBuilder exp { context, exports };
 
