@@ -24,7 +24,7 @@
 #pragma once
 
 #include "v8.h"
-#include <assert.h>
+#include <cassert>
 
 
 class ObjectWrap {
@@ -52,6 +52,12 @@ class ObjectWrap {
   }
 
 
+  NODE_DEPRECATED("Use ObjectWrap::handle(isolate)",)
+  inline v8::Local<v8::Object> handle() {
+    return handle(v8::Isolate::GetCurrent());
+  }
+
+
   inline v8::Local<v8::Object> handle(v8::Isolate* isolate) {
     return v8::Local<v8::Object>::New(isolate, persistent());
   }
@@ -63,6 +69,11 @@ class ObjectWrap {
 
 
  protected:
+  NODE_DEPRECATED("Use ObjectWrap::Wrap(isolate, handle)",)
+  inline void Wrap(v8::Local<v8::Object> handle) {
+    Wrap(v8::Isolate::GetCurrent(), handle);
+  }
+
   inline void Wrap(v8::Isolate* isolate, v8::Local<v8::Object> handle) {
     assert(persistent().IsEmpty());
     assert(handle->InternalFieldCount() > 0);
@@ -72,7 +83,7 @@ class ObjectWrap {
   }
 
 
-  inline void MakeWeak(void) {
+  inline void MakeWeak() {
     persistent().SetWeak(this, WeakCallback, v8::WeakCallbackType::kParameter);
     persistent().MarkIndependent();
   }
