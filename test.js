@@ -20,12 +20,13 @@ test('map', function(assert) {
 	map.set(5, obj);
 	assert.strictEqual(map.size, 5);
 	assert.strictEqual(map.has(5), true);
-	assert.strictEqual(map.has('5'), true);
 	assert.strictEqual(map.get(1), 'one');
 	assert.strictEqual(map.get(2), 2);
 	assert.strictEqual(map.get(3), true);
 	assert.strictEqual(map.get(4), false);
 	assert.strictEqual(map.get(5), obj);
+	assert.strictEqual(map.get('5'), obj);
+	assert.strictEqual(map.get({ toString() { return 5; } }), obj);
 	map.set(1, 'changed');
 	assert.strictEqual(map.get(1), 'changed');
 	assert.strictEqual(map.size, 5);
