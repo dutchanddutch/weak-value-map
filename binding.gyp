@@ -6,7 +6,7 @@
       "conditions": [
         [ "OS=='linux'", { "cflags": [ "-fvisibility=hidden" ] } ]
       ],
-      "sources": [ "weak-value-map.cc" ]
+      "sources": [ "src/weak-value-map.cc" ]
     }
   ]
 }
