@@ -8,17 +8,13 @@
   "description": "A collection of key/value pairs in which the values are weakly referenced.",
   "main": "index.js",
   "scripts": {
-    "test": "node --expose-gc test",
-    "install": "prebuild-install || node-gyp rebuild"
+    "test": "node --expose-gc test"
   },
   "author": "Andre Mapili",
   "license": "MIT",
   "dependencies": {
-    "prebuild-install": "^2.1.0"
   },
   "devDependencies": {
-    "prebuild": "^6.0.2",
-    "prebuild-ci": "^2.0.0",
     "tape": "^4.5.1"
   }
 }
