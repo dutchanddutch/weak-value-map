@@ -38,24 +38,22 @@ struct ClassBuilder {
 			v8::AccessorSetterCallback setter = NULL,
 			v8::PropertyAttribute attributes = v8::DontEnum )
 	{
-		auto signature = v8::AccessorSignature::New( isolate, cls );
 		auto prop_name = intern_string( isolate, name );
 		auto instance = cls->InstanceTemplate();
 		if( ! setter )
 			attributes |= v8::ReadOnly;
-		instance->SetAccessor( prop_name, getter, setter, {}, v8::DEFAULT, attributes, signature );
+		instance->SetAccessor( prop_name, getter, setter, {}, v8::DEFAULT, attributes );
 	}
 
 	void add_accessor( char const *name, v8::AccessorNameGetterCallback getter,
 			v8::AccessorNameSetterCallback setter = NULL,
 			v8::PropertyAttribute attributes = v8::DontEnum )
 	{
-		auto signature = v8::AccessorSignature::New( isolate, cls );
 		auto prop_name = intern_string( isolate, name );
 		auto instance = cls->InstanceTemplate();
 		if( ! setter )
 			attributes |= v8::ReadOnly;
-		instance->SetAccessor( prop_name, getter, setter, {}, v8::DEFAULT, attributes, signature );
+		instance->SetAccessor( prop_name, getter, setter, {}, v8::DEFAULT, attributes );
 	}
 };
 
